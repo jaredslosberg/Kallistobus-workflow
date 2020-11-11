@@ -43,7 +43,7 @@ Submit "kallisto.sh"
 5. Run transcript/gene counting (bustools)
 Submit "bustools.s"
 The count matrices will be generated in the "s" folder within each sample
-They can then be provided to Seurat/Monocle/Scanpy along with the barcodes and gene text files within that folder (Let Jared or Loyal know if you need a script for this)
+They can then be provided to Seurat/Monocle/Scanpy along with the barcodes and gene text files within that folder)
 
 
 
