@@ -1,0 +1,173 @@
+Bootstrap: docker
+From: ubuntu:18.04
+IncludeCmd: yes
+
+%labels
+  Author Loyal A. Goff
+  Maintainer Loyal A. Goff <loyalgoff@jhmi.edu>
+  ModifiedBy Jared 
+  Name scAnalysis
+  Version 0.0.2
+  R_Version 3.6.3
+  build_date 2020 Jul 30
+  R_bioconductor True
+
+%help
+    Goff Lab scAnalysis container
+    ===================
+    Container version: 0.0.3
+    OS Version: Ubuntu 18.04
+    Apps:
+        - kallisto 0.46.1
+        - bustools 0.39.3
+        - kb-python
+        - python 3.6.9
+        - R 3.6.3
+          * monocle3
+	  * velocyto.R
+
+    Usage example:
+        singularity exec scAnalysis.simg kallisto --version
+      or
+        ./scAnalysis.simg kallisto --version
+
+%setup
+  # for Maryland Advanced Research Computing Center
+
+%apprun R
+  exec R "$@"
+
+%apprun Rscript
+  exec Rscript "$@"
+
+%runscript
+  echo "Command executed from Singularity Container\n---\n"
+  exec R "$@"
+
+%test
+
+%post
+  echo "Hello from inside the container"
+  apt-get -y update
+  apt-get -y install wget nano
+  apt-get install -y apt-transport-https apt-utils software-properties-common
+  apt-get install -y add-apt-key
+  export DEBIAN_FRONTEND=noninteractive
+  ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime
+  apt-get install -y tzdata
+  dpkg-reconfigure --frontend noninteractive tzdata
+
+  # add CRAN/Ubuntu repo, add key, then refresh
+  apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
+  add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/'
+  apt-get update
+
+  apt-get install -y libblas3 libblas-dev liblapack-dev liblapack3 curl
+  apt-get install -y gcc fort77 aptitude
+  aptitude install -y g++
+  aptitude install -y xorg-dev
+  aptitude install -y libreadline-dev
+  aptitude install -y gfortran
+  gfortran --version
+  apt-get install -y libssl-dev libxml2-dev libpcre3-dev liblzma-dev libbz2-dev libcurl4-openssl-dev
+  apt-get install -y libhdf5-dev hdf5-helpers libmariadb-client-lgpl-dev
+  apt-get install -y libudunits2-dev libgdal-dev libgeos-dev libproj-dev
+
+  apt-get install -y r-base r-base-dev
+
+  R --version
+
+  # installing packages from cran
+  R --slave -e 'install.packages("devtools",repos="https://cran.rstudio.com/")'
+  R --slave -e 'install.packages("dplyr",repos="https://cran.rstudio.com/")'
+  R --slave -e 'install.packages("rhdf5",repos="https://cran.rstudio.com/")'
+
+  # installing from bioc
+  R --slave -e 'if (!requireNamespace("BiocManager",quietly=TRUE)) install.packages("BiocManager")'
+  R --slave -e 'BiocManager::install(version = "3.10")'
+  R --slave -e 'BiocManager::install("biomaRt",ask=FALSE)'
+  R --slave -e 'BiocManager::install("DropletUtils",ask=FALSE)'
+  R --slave -e 'BiocManager::install("AnnotationHub", ask=FALSE)'
+  R --slave -e 'install.packages("XML", repos = "http://www.omegahat.net/R")' #required for busparse
+  R --slave -e 'BiocManager::install("BSgenome.Mmusculus.UCSC.mm10", ask=FALSE)'
+
+  # install monocle3
+  R --slave -e 'BiocManager::install(c("BiocGenerics", "DelayedArray", "DelayedMatrixStats",
+                       "limma", "S4Vectors", "SingleCellExperiment",
+                       "SummarizedExperiment", "batchelor", "Matrix.utils"))'
+  R --slave -e 'devtools::install_github("cole-trapnell-lab/leidenbase")'
+  R --slave -e 'devtools::install_github("cole-trapnell-lab/monocle3")'
+  R --slave -e 'devtools::install_github("BUStools/BUSpaRse")'
+  
+  # install kallisto
+  KALLISTO_VERS="0.46.1"
+  wget --no-check-certificate https://github.com/pachterlab/kallisto/releases/download/v${KALLISTO_VERS}/kallisto_linux-v${KALLISTO_VERS}.tar.gz
+  tar -zxvf kallisto_linux-v${KALLISTO_VERS}.tar.gz
+  mv kallisto/kallisto /usr/local/bin/
+  rm kallisto_linux-v${KALLISTO_VERS}.tar.gz
+  rm -Rf kallisto
+
+  # Install bustools
+  BUSTOOLS_VERS="0.39.3"
+  wget --no-check-certificate https://github.com/BUStools/bustools/releases/download/v${BUSTOOLS_VERS}/bustools_linux-v${BUSTOOLS_VERS}.tar.gz
+  tar -zxvf bustools_linux-v${BUSTOOLS_VERS}.tar.gz
+  mv bustools/bustools /usr/local/bin/
+  rm bustools_linux-v${BUSTOOLS_VERS}.tar.gz
+  rm -Rf bustools
+
+  # install scanpy dependencies
+  apt-get -y install python3-pip
+  pip3 install numpy
+  pip3 install numba
+  pip3 install seaborn
+  pip3 install scikit-learn
+  pip3 install statsmodels
+  pip3 install pytables
+  pip3 install python-igraph 
+  pip3 install leidenalg
+
+  pip3 install scanpy
+
+  # kb --version
+
+  # Setup container file system
+  ## default mount paths (MARCC)
+  mkdir /scratch /data /work-zfs
+
+  ## Custom scripts/workflows go here
+  mkdir /scripts
+
+  ## More project skeleton stuff
+  #mkdir -p /opt/reference
+  #mkdir -p /opt/data
+
+  # Install velocyto.R
+  apt-get install -y libboost-dev \
+  libbamtools-dev \
+  libboost-dev \
+  libboost-iostreams-dev \
+  libboost-log-dev \
+  libboost-system-dev \
+  libboost-test-dev \
+  libz-dev \
+  libhdf5-cpp-100
+
+  #apt-get install -y libarmadillo7
+  apt-get install -y libarmadillo-dev
+
+  R --slave -e 'BiocManager::install(c("pcaMethods"),suppressAutoUpdate=TRUE,ask=FALSE,suppressUpdates=TRUE)'
+  R --slave -e 'BiocManager::install(c("Biostrings", "GenomicAlignments", "Rsamtools", "edgeR"),suppressAutoUpdate=TRUE,ask=FALSE,suppressUpdates=TRUE)'
+  R --slave -e 'devtools::install_github("mannau/h5")'
+  R --slave -e 'devtools::install_github("velocyto-team/velocyto.R",dep=T,upgrade_dependencies=F)'
+
+
+%environment
+  R_VERSION=3.6.3
+  BUSTOOLS_VERS="0.39.3"
+  KB_PYTHON_VERS="0.24.4"
+  KALLISTO_VERS="0.46.1"
+  export R_VERSION
+  R_CONFIG_DIR=/etc/R/
+  export R_CONFIG_DIR
+  export LC_ALL=C
+  export PATH=$PATH
