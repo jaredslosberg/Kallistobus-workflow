@@ -1,10 +1,10 @@
-Kallisto Bustools Tutorial
-Jared Slosberg
-8/24/2020
+## Kallisto Bustools Tutorial
+### Jared Slosberg
+### 8/24/2020
 
-Files required:
 
-kallistobus_preprocessing.tar.gz
+
+## Files required:
 
 Configuration files:
 kallistobus.yaml 
